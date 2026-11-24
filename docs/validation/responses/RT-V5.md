@@ -1,95 +1,159 @@
-# RT-V5 · Guest and host perspective
+# RT-V5 – Guest and Host Perspective
 
 - **Issue:** #12
-- **Country / general region:** United States
-- **Did you run the demo locally?** no
+- **Country:** United States
+- **Did you run the demo locally?** No
 
-## 1. First read — what do you think it is?
+## 1. First Read – What do you think it is?
 
-*Read the README only up to its first `##` heading. Write this before reading anything else.*
+**What does MicoPay Rentas do, in your own words?**
 
-- What does MicoPay Rentas do, in your own words?
-  > It's a short-term rental platform for Tepoztlán, Morelos that uses a Stellar escrow contract to hold booking payments instead of keeping them in a platform bank account. The host only gets paid after the guest checks in. Cancellation policies and damage deposits are encoded in the smart contract, and the platform takes a 3% fee.
+MicoPay Rentas is a platform where people can find and book short-term homes in Tepoztlán, Mexico. What I find interesting is that the guest's payment is kept safe until they check in. This helps both the guest and the host feel more comfortable because neither has to worry about the other person taking advantage of them.
 
-- Who is it for?
-  > Guests looking to rent short-term accommodations in Tepoztlán, Morelos, and hosts who have properties to rent there.
+**Who is it for?**
 
-- What problem does it solve?
-  > It solves the trust problem around who holds the booking funds before a stay is completed. Instead of the platform holding the money, it sits in a blockchain escrow that automatically enforces cancellation policies and damage deposits, with the platform acting as a neutral arbiter for disputes.
+It is for people looking for a place to stay for a short period and property owners who want to rent out their homes in Tepoztlán.
 
-## 2. After the full README — what did you get wrong?
+**What problem does it solve?**
 
-- What did you misunderstand in step 1, or what surprised you?
-  > I understood it's for Tepoztlán specifically, but I didn't realize this is a testnet demo with fictional listings - I assumed it was a live product. I also didn't understand that the escrow contract has specific functions (lock, cancel, release, dispute, claim_damage, resolve, settle_default, bump) and that the booking ID is a SHA-256 hash. The "demo clock" scaling of time surprised me - that you can compress days into minutes for testing. I also didn't expect the connection to the broader MicoPay ecosystem with cash-in through agents and SPEI payouts.
+It helps solve the trust issues that can happen when booking a place online. Guests want to be sure their money is safe, while hosts want to know they will get paid. The platform helps protect both sides, especially when there are cancellations or disagreements.
 
-- What is still unclear?
-  > The relationship between the current demo (local testnet keys) and the planned MicoPay app integration is clear in concept, but I don't understand how the sign-request flow works in the MicoPay app - the README mentions `/sign-requests` as the same path as MicoPay Café, but I haven't seen that product.
+## 2. After Reading the Full README – What did you get wrong?
 
-## 3. Short-term rentals where you live
+**What did you misunderstand, or what surprised you?**
 
-- Your country / general region (no city or address needed).
-  > United States
+At first, I thought this was already a working rental platform. I later found out that it is still a demo and that the properties shown are not real.
 
-- Where you live, how do people rent homes for short stays? (Airbnb, Booking, other platforms, social media groups, renting directly…)
-  > Mostly Airbnb and Vrbo for vacation rentals. Some people use Booking.com for hotels but rarely for homes. Social media groups (Facebook, local community groups) sometimes have rental listings, but less common. Direct rental between host and guest happens but is rare - people usually want platform protection.
+I was also surprised by how the payment process works. The money is kept safe until certain conditions are met, and there are different ways to handle cancellations, refunds and disagreements.
 
-- What fees do guests or hosts notice, and what do they think of them? A percentage is fine; no amounts of money.
-  > Guests notice Airbnb's service fee (often around 14% but varies by listing) and cleaning fees. Hosts notice Airbnb's host fee (around 3% for most hosts). People generally accept these fees as the cost of using the platform, but guests sometimes complain about high cleaning fees that feel disproportionate to the actual cleaning cost.
+I also found it interesting that the platform plans to connect with the wider MicoPay app, where guests can pay and hosts can receive their money through local agents or bank transfers.
 
-- Do people book directly with the host? What makes them trust or distrust doing that?
-  > Direct booking is uncommon except among people who already know each other or for long-term rentals. Distrust comes from: no platform recourse if the property doesn't match the listing, no review system, security concerns about payment methods, and no clear cancellation enforcement. Trust comes from personal references, previous successful direct dealings, or when the host is well-known in the community.
+**What is still unclear?**
 
-- Are there common problems with cancellations, damage deposits or disputes?
-  > Cancellations are a frequent point of friction - guests sometimes feel hosts cancel on them for higher-paying bookings, and hosts worry about last-minute cancellations that leave the property empty. Damage deposits are controversial; guests often don't understand when they might be charged, and hosts find it difficult to actually claim damages without photographic evidence and clear documentation. Disputes over property condition vs. listing accuracy are common.
+I understand how the rental platform is supposed to work, but I am still not sure how it will connect with the main MicoPay app. I would like to understand how guests will approve payments through the app, especially since the README mentions another MicoPay product.
 
-- Do you live this yourself (as a guest or host), or only hear about it?
-  > I only hear about it through friends and online discussions, not personal experience.
+## 3. Short-term Rentals Where You Live
+
+**Your country / general region:**
+
+United States.
+
+**How do people rent homes for short stays?**
+
+Most people use platforms like Airbnb and Vrbo when looking for a place to stay. Some also use Facebook groups and local communities to find rental properties, but this is less common.
+
+Booking directly with a property owner happens sometimes, but most people prefer using a platform because they feel safer that way.
+
+**What fees do guests or hosts notice, and what do they think of them?**
+
+Guests often complain about service fees and cleaning fees, especially when the extra charges make the booking more expensive than expected.
+
+Hosts also pay fees to platforms like Airbnb, but most people accept these charges because they want the convenience and protection that comes with using the platform.
+
+**Do people book directly with the host? What makes them trust or distrust doing that?**
+
+Some people book directly, especially when they already know the property owner or someone who has used the property before.
+
+However, many people prefer using platforms because they feel safer. When booking directly, there is always the worry of losing money, getting a property that looks different from the pictures, or having no one to help when something goes wrong.
+
+**Are there common problems with cancellations, damage deposits or disputes?**
+
+Yes. Cancellations can be frustrating for both guests and hosts. A guest may lose money when plans change, while a host may lose a booking at the last minute.
+
+Damage deposits can also cause problems because guests sometimes don't understand why they are being charged, and hosts may struggle to prove that damage actually happened.
+
+**Do you experience this yourself, or do you only hear about it?**
+
+I don't have personal experience as a host or guest. Most of what I know comes from friends and discussions I've seen online.
 
 ## 4. Value
 
-- **How useful does it look to you?** 1 (not at all) – 5 (very). Why?
-  > 3. The escrow-based approach is conceptually strong for solving trust problems, especially the automatic enforcement of cancellation policies and the constraint that the arbiter can only split funds between the three parties (guest, host, platform). However, it's geographically limited to Tepoztlán, and as a testnet demo, it's not clear how this would scale to other locations or how the user experience would compare to established platforms like Airbnb.
+**How useful does it look to you? (1–5). Why?**
 
-- What is the most valuable part?
-  > The escrow contract's design where the arbiter (MicoPay) can only split funds between guest, host, and platform, and cannot send funds anywhere else. This constraint, mentioned in the README's "Custody" section and in the dispute resolution step, creates real trust because the platform cannot unilaterally take the money.
+**3 out of 5.**
 
-- What is missing?
-  > I don't see mention of a review system or reputation mechanism for guests and hosts. The README focuses on the financial escrow but doesn't address how people build trust in each other's reliability. Also missing: how the listing verification works (how do guests know the property exists and matches the description?), and what happens if the property is fundamentally different from what was booked.
+I think the idea is useful, especially because it helps protect both guests and hosts when money is involved.
 
-- What would stop you (or the person in your issue's role) from using it?
-  > As a guest: lack of reviews/reputation system for hosts and properties, uncertainty about whether the fictional listings in the demo would be replaced with verified real properties, and the requirement to use Stellar/USDC might be a barrier for people unfamiliar with crypto. As a host: the complexity of the system might be daunting compared to just listing on Airbnb, and the 3% fee is competitive but the user experience needs to be simple enough to be worth switching.
+I like the fact that payments are only released when the agreed conditions are met. However, since the project is still a demo and only focuses on one location, I would like to see how it works with real properties and real users before giving it a higher rating.
 
-## 5. The MicoPay app
+**What is the most valuable part?**
 
-*The README section "How it connects to the MicoPay app (planned)" describes the guest paying from the MicoPay app and the host cashing out with an agent or via SPEI.*
+The best part for me is that the platform cannot simply take the guest's money or send it wherever it wants. The money can only be shared between the guest, the host and the platform.
 
-- Does that connection make the product more useful to you? What would it change for you?
-  > Yes, significantly. The planned connection makes it much more practical because guests can pay with cash through the MicoPay cash network (removing the crypto barrier), and hosts can cash out through agents or SPEI (direct to bank). This bridges the gap between blockchain-based escrow and everyday fiat usage. The single identity across MicoPay products (Stellar address) is also valuable for reducing friction. Without this connection, the product would only work for crypto-savvy users; with it, it could work for anyone.
+That gives me more confidence because it means the platform has limits, even when there is a disagreement.
 
-## 6. What confused you
+**What is missing?**
 
-- Which screen, step or term confused you, and what did you expect instead?
-  > The term "DEMO_DAY_SECS" and the concept of scaling time (one calendar day lasting 60 seconds by default) was confusing at first. I expected a real-time demo or explained simulation, not time compression. The README explains it well on second read, but initially it seemed like a technical detail that might affect how the escrow timing works. Also, the mention of `/sign-requests` as "the same path as MicoPay Café" assumes familiarity with that other product, which I don't have.
+I think the platform needs a review system where guests and hosts can rate each other after a booking.
 
-## 7. Questions for your issue
+It would also be helpful to know how properties are checked before they are listed. Guests need to feel confident that the pictures and information they see are real.
 
-*Copy the questions from your issue here and answer them.*
+**What would stop you or someone like you from using it?**
 
-- Would you trust MicoPay to decide a dispute between guest and host? Why?
-  > Yes, I would trust MicoPay as an arbiter more than I would trust a traditional platform's customer support. The reason is the technical constraint mentioned in the README's "Custody" section and step 4 of "How a booking works": MicoPay can only split the escrow between guest, host, and platform, and cannot send funds anywhere else. The platform can never take more than its 3% fee. This constraint is enforced by the smart contract, not by policy. Traditional platforms have full control over the funds and could theoretically make arbitrary decisions; here, the arbiter's power is structurally limited.
+As a guest, I would want to see reviews from other people and know that the properties are real before making a booking.
 
-- The README says the arbiter can only split the escrow between guest, host and platform. Does that limit make you trust it more?
-  > Yes, absolutely. This is the most trust-building feature. Knowing that the arbiter cannot send funds anywhere else, and that the platform is capped at its 3% fee, means there's no scenario where MicoPay could walk away with the booking money. The worst-case outcome is a dispute decision I disagree with, but not theft. This is mentioned in the "Custody" section and reinforced in step 4 of the booking flow.
+I would also want the payment process to be simple. Not everyone is familiar with crypto, so the platform should make it easy for people who just want to book a place without worrying about how everything works behind the scenes.
 
-- What would you need to see to trust the dispute process?
-  > I would need to see: (1) clear documentation of what evidence is required for disputes (photos, messages, check-in/check-out timestamps), (2) examples of past dispute decisions (anonymized) to understand how MicoPay applies its judgment, (3) a timeline for how quickly disputes are resolved (the README mentions 7 days but that's for settlement if the arbiter doesn't decide - what's the SLA for actually deciding?), and (4) transparency about whether the arbiter decision can be appealed or is final. The README's "Custody" section establishes the technical trust, but procedural trust needs more detail.
+As a host, I think the platform would need to be easy to use and offer enough benefits to make people consider leaving platforms they already know.
+
+## 5. The MicoPay App
+
+**Does connecting it to the MicoPay app make the product more useful? What would it change for you?**
+
+Yes, definitely.
+
+I think this makes the idea much more practical. Not everyone wants to deal with crypto, so being able to pay through local agents and receive money through bank transfers makes things easier.
+
+It also means guests and hosts don't have to understand everything happening behind the scenes. They can simply use the service like they would any other rental platform.
+
+## 6. What Confused You
+
+**Which screen, step or term confused you, and what did you expect instead?**
+
+The part about time moving faster in the demo confused me at first. I didn't immediately understand why a whole day would pass in just a few minutes.
+
+I also found the mention of another MicoPay product a little confusing because I haven't used it before. A simple explanation of how the two products work together would make things easier for someone seeing the project for the first time.
+
+## 7. Questions for Your Issue
+
+**Would you trust MicoPay to decide a disagreement between a guest and a host? Why?**
+
+Yes, I would be comfortable with it, mainly because the platform cannot just take all the money for itself.
+
+I like that there are clear limits on what the platform can do with the money. It makes the process feel fairer because both the guest and host have some protection.
+
+**The README says the platform can only share the money between the guest, host and platform. Does that make you trust it more?**
+
+Yes, it does.
+
+For me, this is one of the strongest parts of the idea. Knowing that the platform cannot send the money somewhere else makes me feel more comfortable using it.
+
+It also shows that the platform has limits and cannot simply do whatever it wants with people's money.
+
+**What would you need to see to trust the process of handling disagreements?**
+
+I would like to see a clear explanation of how disagreements are handled and what happens when someone makes a complaint.
+
+For example, what kind of proof would guests and hosts need to provide? How long does it take to get a decision? And can someone ask for the decision to be reviewed if they feel it was unfair?
+
+I think answering these questions would help people feel much more comfortable using the platform.
 
 ## 8. Ideas
 
-Up to 3. For each one: the problem it solves, then the idea.
+**1. Property verification**
 
-1. **Problem:** Guests have no way to know if a property actually exists and matches the listing before paying into escrow. **Idea:** Add a verification badge system where MicoPay (or a trusted local agent) physically verifies properties and certifies that photos and amenities are accurate. The verification status could be displayed on each listing.
+One thing I think would make the platform better is a way to confirm that listed properties are real.
 
-2. **Problem:** The 7-day arbiter window for dispute resolution means funds are locked for at least that long if a dispute is filed, which could be frustrating for guests who need their money back quickly for legitimate issues. **Idea:** Offer an optional "fast-track" dispute resolution where the guest can pay a small additional fee (e.g., 1% of the booking) to get a decision within 24 hours, with the fee going to MicoPay only if the guest's claim is rejected (to discourage frivolous fast-track requests).
+For example, the team could work with local agents to visit properties and check that the pictures and information are correct. Guests would then know which properties have been checked before booking.
 
-3. **Problem:** There's no mention of a review or reputation system, which is crucial for building trust between strangers. **Idea:** After a booking completes (either through release or settlement), prompt both guest and host to leave reviews. Reviews are only published after both parties have submitted, or after a timeout, to prevent retaliatory reviews. Display aggregate ratings on listings and user profiles.
+**2. Faster dispute handling**
+
+I think waiting several days to resolve a disagreement could be frustrating, especially when someone needs their money back.
+
+It would be helpful to have an option for urgent cases where disagreements can be reviewed faster, perhaps within 24 hours.
+
+**3. Reviews and ratings**
+
+I would also suggest adding a review system where guests and hosts can rate each other after a completed booking.
+
+This would help people know who they are dealing with before making a booking. It would also encourage both guests and hosts to treat each other fairly.
