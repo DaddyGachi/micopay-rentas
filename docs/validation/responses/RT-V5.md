@@ -1,6 +1,6 @@
 # RT-V5 · Guest and host perspective
 
-- **Issue:** #5
+- **Issue:** #12
 - **Country / general region:** United States
 - **Did you run the demo locally?** no
 
