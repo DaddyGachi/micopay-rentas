@@ -77,6 +77,20 @@ export default function Calendar({ booked, checkIn, checkOut, onCheckInChange, o
     return false;
   }, [minDate]);
 
+  // Check if a range would cross any booked night
+  const wouldCrossBooked = useCallback((start: string, end: string): boolean => {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    const current = new Date(startDate);
+
+    while (current < endDate) {
+      const iso = current.toISOString().slice(0, 10);
+      if (bookedDates.has(iso)) return true;
+      current.setDate(current.getDate() + 1);
+    }
+    return false;
+  }, [bookedDates]);
+
   const handleDateClick = useCallback((date: Date) => {
     if (isDateDisabled(date)) return;
     const iso = date.toISOString().slice(0, 10);
@@ -96,10 +110,14 @@ export default function Calendar({ booked, checkIn, checkOut, onCheckInChange, o
       onCheckInChange('');
       onCheckOutChange('');
     } else {
-      // Set check-out
+      // Set check-out - validate that range doesn't cross booked nights
+      // Allowed: range can end on the day another booking starts (but not include it)
+      if (wouldCrossBooked(checkIn, iso)) {
+        return; // Invalid range: would cross a booked night
+      }
       onCheckOutChange(iso);
     }
-  }, [checkIn, checkOut, onCheckInChange, onCheckOutChange, isDateDisabled, getDateState]);
+  }, [checkIn, checkOut, onCheckInChange, onCheckOutChange, isDateDisabled, getDateState, wouldCrossBooked]);
 
   const prevMonth = () => {
     setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1));

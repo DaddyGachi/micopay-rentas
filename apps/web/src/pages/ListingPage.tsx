@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, type Quote } from '../api';
 import { Cover, ErrorBox, Panel, Row, usePersona } from '../comun';
@@ -14,6 +14,28 @@ export default function ListingPage() {
   const nav = useNavigate();
   const [checkIn, setCheckIn] = useState(isoDay(3));
   const [checkOut, setCheckOut] = useState(isoDay(5));
+
+  // Validate that range doesn't cross booked nights
+  const isRangeValid = useCallback((start: string, end: string): boolean => {
+    if (!l || !l.booked || l.booked.length === 0) return true;
+    if (!start || !end) return true;
+
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    const current = new Date(startDate);
+
+    while (current < endDate) {
+      const iso = current.toISOString().slice(0, 10);
+      const crossesBooked = l.booked.some((b) => {
+        const bStart = new Date(b.check_in);
+        const bEnd = new Date(b.check_out);
+        return current >= bStart && current < bEnd;
+      });
+      if (crossesBooked) return false;
+      current.setDate(current.getDate() + 1);
+    }
+    return true;
+  }, [l]);
   const [guests, setGuests] = useState(2);
   const [q, setQ] = useState<Quote | null>(null);
   const [qErr, setQErr] = useState<string | null>(null);
@@ -76,10 +98,24 @@ export default function ListingPage() {
         <Panel title={<span className="num">{mxn(l.nightly_mxn)} / night</span>}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="text-[13px] font-bold text-gris">Check-in
-              <input type="date" value={checkIn} min={isoDay(1)} onChange={(e) => setCheckIn(e.target.value)} className="mt-1 min-h-12 w-full rounded-sm border-2 border-tinta bg-fondo px-2 text-[16px] text-tinta" />
+              <input type="date" value={checkIn} min={isoDay(1)} onChange={(e) => {
+                const newCheckIn = e.target.value;
+                // If check-out is set, validate the new range
+                if (checkOut && !isRangeValid(newCheckIn, checkOut)) {
+                  setCheckOut(''); // Clear check-out if range becomes invalid
+                }
+                setCheckIn(newCheckIn);
+              }} className="mt-1 min-h-12 w-full rounded-sm border-2 border-tinta bg-fondo px-2 text-[16px] text-tinta" />
             </label>
             <label className="text-[13px] font-bold text-gris">Check-out
-              <input type="date" value={checkOut} min={checkIn} onChange={(e) => setCheckOut(e.target.value)} className="mt-1 min-h-12 w-full rounded-sm border-2 border-tinta bg-fondo px-2 text-[16px] text-tinta" />
+              <input type="date" value={checkOut} min={checkIn} onChange={(e) => {
+                const newCheckOut = e.target.value;
+                // Validate the range before accepting
+                if (newCheckOut && !isRangeValid(checkIn, newCheckOut)) {
+                  return; // Reject invalid range
+                }
+                setCheckOut(newCheckOut);
+              }} className="mt-1 min-h-12 w-full rounded-sm border-2 border-tinta bg-fondo px-2 text-[16px] text-tinta" />
             </label>
             <label className="sm:col-span-2 text-[13px] font-bold text-gris">Guests
               <input type="number" min={1} max={l.max_guests} value={guests} onChange={(e) => setGuests(Number(e.target.value))} className="mt-1 min-h-12 w-full rounded-sm border-2 border-tinta bg-fondo px-2 text-[16px] text-tinta" />
