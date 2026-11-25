@@ -4,6 +4,7 @@ import { api, type Quote } from '../api';
 import { Cover, ErrorBox, Panel, Row, usePersona } from '../comun';
 import { day, isoDay, mxn, usdc } from '../format';
 import { Badge, Button, Label } from '../ui';
+import Calendar from '../ui/Calendar';
 import { useData } from '../useData';
 
 export default function ListingPage() {
@@ -100,9 +101,25 @@ export default function ListingPage() {
           )}
           {q && !q.available && <div className="mt-3"><ErrorBox msg="Those dates are already booked" /></div>}
           <div className="mt-3"><ErrorBox msg={qErr ?? err} /></div>
-          {l.booked && l.booked.length > 0 && (
-            <div className="mt-3 text-[12px] text-gris">Booked: {l.booked.map((b) => `${day(b.check_in)} → ${day(b.check_out)}`).join(' · ')}</div>
-          )}
+
+          {/* Calendar: shown only on screens that fit 7×48px cells */}
+          <div className="hidden xl:block mt-4">
+            <Calendar
+              booked={l.booked ?? []}
+              checkIn={checkIn}
+              checkOut={checkOut}
+              onCheckInChange={setCheckIn}
+              onCheckOutChange={setCheckOut}
+              minDate={isoDay(1)}
+            />
+          </div>
+
+          {/* Fallback for narrow screens: text list of booked nights */}
+          <div className="xl:hidden mt-3">
+            {l.booked && l.booked.length > 0 && (
+              <div className="text-[12px] text-gris">Booked: {l.booked.map((b) => `${day(b.check_in)} → ${day(b.check_out)}`).join(' · ')}</div>
+            )}
+          </div>
 
           <div className="mt-4">
             {isGuest ? (
