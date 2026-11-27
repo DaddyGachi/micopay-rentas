@@ -1,10 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, type Quote } from '../api';
 import { Cover, ErrorBox, Panel, Row, usePersona } from '../comun';
 import { day, isoDay, mxn, usdc } from '../format';
 import { Badge, Button, Label } from '../ui';
-import Calendar from '../ui/Calendar';
+import Calendar, { crossesBooked } from '../ui/Calendar';
 import { useData } from '../useData';
 
 export default function ListingPage() {
@@ -15,37 +15,30 @@ export default function ListingPage() {
   const [checkIn, setCheckIn] = useState(isoDay(3));
   const [checkOut, setCheckOut] = useState(isoDay(5));
 
-  // Validate that range doesn't cross booked nights
-  const isRangeValid = useCallback((start: string, end: string): boolean => {
-    if (!l || !l.booked || l.booked.length === 0) return true;
-    if (!start || !end) return true;
-
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    const current = new Date(startDate);
-
-    while (current < endDate) {
-      const iso = current.toISOString().slice(0, 10);
-      const crossesBooked = l.booked.some((b) => {
-        const bStart = new Date(b.check_in);
-        const bEnd = new Date(b.check_out);
-        return current >= bStart && current < bEnd;
-      });
-      if (crossesBooked) return false;
-      current.setDate(current.getDate() + 1);
-    }
-    return true;
-  }, [l]);
+  const isRangeValid = (start: string, end: string) => !start || !end || !crossesBooked(l?.booked ?? [], start, end);
   const [guests, setGuests] = useState(2);
   const [q, setQ] = useState<Quote | null>(null);
   const [qErr, setQErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const quoteReqRef = useRef(0);
+  const [quoteDates, setQuoteDates] = useState<{ checkIn: string; checkOut: string } | null>(null);
 
   useEffect(() => {
     if (!l) return;
     setQErr(null);
-    api.quote(l.id, checkIn, checkOut).then(setQ).catch((e: Error) => { setQ(null); setQErr(e.message); });
+    if (!checkIn || !checkOut) { setQ(null); setQuoteDates(null); return; }
+    setQ(null);
+    setQuoteDates(null);
+    const reqId = ++quoteReqRef.current;
+    api.quote(l.id, checkIn, checkOut).then((quote) => {
+      if (reqId === quoteReqRef.current) {
+        setQ(quote);
+        setQuoteDates({ checkIn, checkOut });
+      }
+    }).catch((e: Error) => {
+      if (reqId === quoteReqRef.current) { setQ(null); setQErr(e.message); }
+    });
   }, [l, checkIn, checkOut]);
 
   if (error) return <ErrorBox msg={error} />;
@@ -60,7 +53,14 @@ export default function ListingPage() {
       const r = await api.book({ listingId: l.id, guestId: persona.user.id, checkIn, checkOut, guests });
       nav(`/bookings/${r.id}`);
     } catch (e) {
-      setErr((e as Error).message);
+      const errMsg = (e as Error).message;
+      if (errMsg === 'Those dates are already booked') {
+        setErr('Those dates are no longer available. Please choose different dates.');
+        setQ(null);
+        setQuoteDates(null);
+      } else {
+        setErr(errMsg);
+      }
       reload();
     } finally {
       setBusy(false);
@@ -138,8 +138,7 @@ export default function ListingPage() {
           {q && !q.available && <div className="mt-3"><ErrorBox msg="Those dates are already booked" /></div>}
           <div className="mt-3"><ErrorBox msg={qErr ?? err} /></div>
 
-          {/* Calendar: shown only on screens that fit 7×48px cells */}
-          <div className="hidden xl:block mt-4">
+          <div className="mt-4">
             <Calendar
               booked={l.booked ?? []}
               checkIn={checkIn}
@@ -150,16 +149,10 @@ export default function ListingPage() {
             />
           </div>
 
-          {/* Fallback for narrow screens: text list of booked nights */}
-          <div className="xl:hidden mt-3">
-            {l.booked && l.booked.length > 0 && (
-              <div className="text-[12px] text-gris">Booked: {l.booked.map((b) => `${day(b.check_in)} → ${day(b.check_out)}`).join(' · ')}</div>
-            )}
-          </div>
 
           <div className="mt-4">
             {isGuest ? (
-              <Button block disabled={!q || !q.available || busy} onClick={book}>
+              <Button block disabled={!q || !q.available || busy || quoteDates?.checkIn !== checkIn || quoteDates?.checkOut !== checkOut} onClick={book}>
                 {busy ? 'Locking in escrow on Stellar…' : 'Book and pay into escrow'}
               </Button>
             ) : (

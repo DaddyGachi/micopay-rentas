@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { day } from '../format';
 
 interface BookedRange {
@@ -17,259 +17,134 @@ interface CalendarProps {
 
 type DateState = 'free' | 'booked' | 'selected' | 'in-range';
 
+/* Dates are plain YYYY-MM-DD strings. All arithmetic is done in UTC so the
+   user's time zone can never shift a day. */
+const toIso = (y: number, m: number, d: number) => new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10);
+const addDays = (iso: string, n: number) => {
+  const [y, m, d] = iso.split('-').map(Number) as [number, number, number];
+  return toIso(y, m - 1, d + n);
+};
+
+/** True when [start, end) contains a booked night. A range may end on the day another booking starts. */
+export function crossesBooked(booked: BookedRange[], start: string, end: string): boolean {
+  return booked.some((b) => start < b.check_out.slice(0, 10) && end > b.check_in.slice(0, 10));
+}
+
+const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
 export default function Calendar({ booked, checkIn, checkOut, onCheckInChange, onCheckOutChange, minDate }: CalendarProps) {
-  const [viewMonth, setViewMonth] = useState(() => new Date(checkIn || minDate || new Date()));
+  const [view, setView] = useState(() => {
+    const [y, m] = (checkIn || minDate || toIso(2026, 0, 1)).split('-').map(Number) as [number, number];
+    return { y, m: m - 1 };
+  });
   const gridRef = useRef<HTMLDivElement>(null);
 
-  // Build set of booked dates for O(1) lookup
-  const bookedDates = useMemo(() => {
+  // Booked nights: every day from check_in up to (not including) check_out.
+  const bookedNights = useMemo(() => {
     const set = new Set<string>();
-    booked.forEach(({ check_in, check_out }) => {
-      const start = new Date(check_in);
-      const end = new Date(check_out);
-      const current = new Date(start);
-      while (current < end) {
-        set.add(current.toISOString().slice(0, 10));
-        current.setDate(current.getDate() + 1);
-      }
-    });
+    for (const b of booked) {
+      for (let d = b.check_in.slice(0, 10); d < b.check_out.slice(0, 10); d = addDays(d, 1)) set.add(d);
+    }
     return set;
   }, [booked]);
 
-  // Get days for current month view
   const monthDays = useMemo(() => {
-    const year = viewMonth.getFullYear();
-    const month = viewMonth.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const startOffset = firstDay.getDay(); // 0 = Sunday
-    const days: Date[] = [];
-
-    // Add empty cells for days before month starts
-    for (let i = 0; i < startOffset; i++) {
-      days.push(new Date(0)); // sentinel
-    }
-
-    // Add actual days
-    for (let d = 1; d <= lastDay.getDate(); d++) {
-      days.push(new Date(year, month, d));
-    }
-
+    const offset = new Date(Date.UTC(view.y, view.m, 1)).getUTCDay();
+    const last = new Date(Date.UTC(view.y, view.m + 1, 0)).getUTCDate();
+    const days: Array<string | null> = Array.from({ length: offset }, () => null);
+    for (let d = 1; d <= last; d++) days.push(toIso(view.y, view.m, d));
     return days;
-  }, [viewMonth]);
+  }, [view]);
 
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  const picking = Boolean(checkIn && !checkOut);
+  // While picking a check-out, a booked day is still a valid end if no booked night lies in between.
+  const canEndOn = useCallback((iso: string) => picking && iso > checkIn && !crossesBooked(booked, checkIn, iso), [picking, checkIn, booked]);
 
-  const getDateState = useCallback((date: Date): DateState => {
-    if (date.getTime() === 0) return 'free';
-    const iso = date.toISOString().slice(0, 10);
-    if (bookedDates.has(iso)) return 'booked';
+  const stateOf = (iso: string): DateState => {
     if (iso === checkIn || iso === checkOut) return 'selected';
+    if (bookedNights.has(iso)) return 'booked';
     if (checkIn && checkOut && iso > checkIn && iso < checkOut) return 'in-range';
     return 'free';
-  }, [bookedDates, checkIn, checkOut]);
+  };
+  const isDisabled = (iso: string) => Boolean(minDate && iso < minDate) || (bookedNights.has(iso) && !canEndOn(iso));
 
-  const isDateDisabled = useCallback((date: Date): boolean => {
-    if (date.getTime() === 0) return true;
-    const iso = date.toISOString().slice(0, 10);
-    if (minDate && iso < minDate) return true;
-    return false;
-  }, [minDate]);
-
-  // Check if a range would cross any booked night
-  const wouldCrossBooked = useCallback((start: string, end: string): boolean => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    const current = new Date(startDate);
-
-    while (current < endDate) {
-      const iso = current.toISOString().slice(0, 10);
-      if (bookedDates.has(iso)) return true;
-      current.setDate(current.getDate() + 1);
-    }
-    return false;
-  }, [bookedDates]);
-
-  const handleDateClick = useCallback((date: Date) => {
-    if (isDateDisabled(date)) return;
-    const iso = date.toISOString().slice(0, 10);
-    const state = getDateState(date);
-
-    if (state === 'booked') return;
-
-    if (!checkIn || (checkIn && checkOut)) {
-      // Start new range
+  const pick = (iso: string) => {
+    if (isDisabled(iso)) return;
+    if (!checkIn || checkOut || iso < checkIn) {
       onCheckInChange(iso);
       onCheckOutChange('');
-    } else if (iso < checkIn) {
-      // Clicked before check-in: move check-in
-      onCheckInChange(iso);
     } else if (iso === checkIn) {
-      // Clicked check-in: clear range
       onCheckInChange('');
       onCheckOutChange('');
-    } else {
-      // Set check-out - validate that range doesn't cross booked nights
-      // Allowed: range can end on the day another booking starts (but not include it)
-      if (wouldCrossBooked(checkIn, iso)) {
-        return; // Invalid range: would cross a booked night
-      }
+    } else if (!crossesBooked(booked, checkIn, iso)) {
       onCheckOutChange(iso);
     }
-  }, [checkIn, checkOut, onCheckInChange, onCheckOutChange, isDateDisabled, getDateState, wouldCrossBooked]);
-
-  const prevMonth = () => {
-    setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1));
   };
 
-  const nextMonth = () => {
-    setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1));
+  const moveMonth = (delta: number) => setView((v) => {
+    const d = new Date(Date.UTC(v.y, v.m + delta, 1));
+    return { y: d.getUTCFullYear(), m: d.getUTCMonth() };
+  });
+
+  const onKey = (e: React.KeyboardEvent, iso: string) => {
+    const step: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(iso); return; }
+    const n = step[e.key];
+    if (n === undefined) return;
+    e.preventDefault();
+    const target = addDays(iso, n);
+    const el = gridRef.current?.querySelector<HTMLElement>(`[data-date="${target}"]`);
+    if (el) el.focus();
   };
 
-  // Keyboard navigation
-  const handleKeyDown = useCallback((e: React.KeyboardEvent, date: Date) => {
-    if (isDateDisabled(date)) return;
-
-    let newDate: Date | null = null;
-    const d = date.getDate();
-    const m = date.getMonth();
-    const y = date.getFullYear();
-
-    switch (e.key) {
-      case 'ArrowLeft':
-        newDate = new Date(y, m, d - 1);
-        break;
-      case 'ArrowRight':
-        newDate = new Date(y, m, d + 1);
-        break;
-      case 'ArrowUp':
-        newDate = new Date(y, m, d - 7);
-        break;
-      case 'ArrowDown':
-        newDate = new Date(y, m, d + 7);
-        break;
-      case 'Home':
-        newDate = new Date(y, m, 1);
-        break;
-      case 'End':
-        newDate = new Date(y, m + 1, 0);
-        break;
-      case 'PageUp':
-        newDate = new Date(y, m - 1, d);
-        break;
-      case 'PageDown':
-        newDate = new Date(y, m + 1, d);
-        break;
-      case 'Enter':
-      case ' ':
-        e.preventDefault();
-        handleDateClick(date);
-        return;
-      default:
-        return;
-    }
-
-    if (newDate && newDate.getMonth() === m && newDate.getDate() > 0) {
-      e.preventDefault();
-      const iso = newDate.toISOString().slice(0, 10);
-      const element = document.querySelector(`[data-date="${iso}"]`) as HTMLElement;
-      element?.focus();
-    }
-  }, [isDateDisabled, handleDateClick]);
-
-  // Focus management for month navigation
-  useEffect(() => {
-    if (gridRef.current) {
-      const firstDay = gridRef.current.querySelector('button:not(:disabled)') as HTMLElement;
-      firstDay?.focus();
-    }
-  }, [viewMonth]);
-
-  const renderDayCell = (date: Date, index: number) => {
-    if (date.getTime() === 0) {
-      return <div key={`empty-${index}`} className="w-12 h-12" aria-hidden="true" />;
-    }
-
-    const iso = date.toISOString().slice(0, 10);
-    const state = getDateState(date);
-    const disabled = isDateDisabled(date);
-    const formatted = day(iso);
-
-    const baseClasses = 'w-12 h-12 flex items-center justify-center text-[15px] font-bold rounded-lg border-2 transition-none focus:outline-2 focus:outline-offset-2 focus:outline-tinta';
-    const stateClasses: Record<DateState, string> = {
-      free: 'bg-papel text-tinta border-line hover:border-tinta hover:shadow-solida-sm',
+  const cell = (iso: string | null, i: number) => {
+    if (!iso) return <div key={`empty-${i}`} className="h-12" aria-hidden="true" />;
+    const state = stateOf(iso);
+    const disabled = isDisabled(iso);
+    const label = `${day(iso)}, ${state === 'booked' ? (disabled ? 'booked' : 'booked from this day, can be your check-out') : state === 'selected' ? 'selected' : state === 'in-range' ? 'in selected range' : 'no booking registered'}`;
+    const style: Record<DateState, string> = {
+      free: 'bg-papel text-tinta border-line hover:border-tinta',
       booked: 'bg-papel text-gris-2 border-line line-through decoration-2 decoration-tinta',
       selected: 'bg-naranja text-papel border-tinta shadow-solida-sm',
       'in-range': 'bg-naranja-suave text-tinta border-naranja-borde',
     };
-
     return (
       <button
         key={iso}
         data-date={iso}
         type="button"
-        disabled={disabled || state === 'booked'}
-        className={`${baseClasses} ${stateClasses[state]} ${disabled ? 'opacity-30 cursor-not-allowed' : ''}`}
-        onClick={() => handleDateClick(date)}
-        onKeyDown={(e) => handleKeyDown(e, date)}
-        aria-label={state === 'booked' ? `${formatted}, booked` : state === 'selected' ? `${formatted}, selected` : state === 'in-range' ? `${formatted}, in selected range` : `${formatted}, no booking registered`}
+        disabled={disabled}
+        className={`flex h-12 w-full min-w-0 items-center justify-center rounded-lg border-2 text-[15px] font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinta ${style[state]} ${disabled ? 'cursor-not-allowed opacity-40' : ''}`}
+        onClick={() => pick(iso)}
+        onKeyDown={(e) => onKey(e, iso)}
+        aria-label={label}
         aria-pressed={state === 'selected'}
-        aria-disabled={disabled || state === 'booked'}
       >
-        {date.getDate()}
+        {Number(iso.slice(8))}
       </button>
     );
   };
 
+  const navBtn = 'min-h-12 min-w-12 rounded-lg border-2 border-tinta bg-papel px-3 font-bold text-[15px] text-tinta focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-tinta active:translate-x-[1px] active:translate-y-[1px]';
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={prevMonth}
-          className="min-h-12 px-3 py-2 rounded-lg border-2 border-tinta bg-papel text-tinta font-bold text-[15px] hover:shadow-solida-sm focus:outline-2 focus:outline-offset-2 focus:outline-tinta active:translate-x-[1px] active:translate-y-[1px] active:shadow-solida-xs"
-          aria-label="Previous month"
-        >
-          ←
-        </button>
-        <span className="text-[15px] font-bold text-tinta">
-          {monthNames[viewMonth.getMonth()]} {viewMonth.getFullYear()}
-        </span>
-        <button
-          type="button"
-          onClick={nextMonth}
-          className="min-h-12 px-3 py-2 rounded-lg border-2 border-tinta bg-papel text-tinta font-bold text-[15px] hover:shadow-solida-sm focus:outline-2 focus:outline-offset-2 focus:outline-tinta active:translate-x-[1px] active:translate-y-[1px] active:shadow-solida-xs"
-          aria-label="Next month"
-        >
-          →
-        </button>
+        <button type="button" onClick={() => moveMonth(-1)} className={navBtn} aria-label="Previous month">←</button>
+        <span className="text-[15px] font-bold text-tinta" aria-live="polite">{monthNames[view.m]} {view.y}</span>
+        <button type="button" onClick={() => moveMonth(1)} className={navBtn} aria-label="Next month">→</button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1" role="grid" aria-label="Calendar">
-        {weekDays.map((wd) => (
-          <div key={wd} className="text-center text-[12px] font-bold text-gris py-2" aria-label={wd}>
-            {wd}
-          </div>
-        ))}
-        <div ref={gridRef} className="contents" role="rowgroup">
-          {monthDays.map((date, i) => renderDayCell(date, i))}
-        </div>
+      <div ref={gridRef} className="grid grid-cols-7 gap-0.5" aria-label="Calendar">
+        {weekDays.map((wd) => <div key={wd} className="py-1 text-center text-[12px] font-bold text-gris" aria-hidden="true">{wd}</div>)}
+        {monthDays.map(cell)}
       </div>
 
-      <div className="flex items-center gap-4 text-[12px] text-gris">
-        <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded border-2 border-line bg-papel" />
-          <span>No booking registered</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded border-2 border-line bg-papel line-through decoration-tinta" />
-          <span>Booked</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded border-2 border-tinta bg-naranja" />
-          <span>Selected</span>
-        </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-gris">
+        <span className="flex items-center gap-1"><span className="h-4 w-4 rounded border-2 border-line bg-papel" />No booking registered</span>
+        <span className="flex items-center gap-1"><span className="h-4 w-4 rounded border-2 border-line bg-papel line-through decoration-tinta" />Booked</span>
+        <span className="flex items-center gap-1"><span className="h-4 w-4 rounded border-2 border-tinta bg-naranja" />Selected</span>
       </div>
     </div>
   );
