@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, type Quote } from '../api';
 import { Cover, ErrorBox, Panel, Row, usePersona } from '../comun';
@@ -18,11 +18,23 @@ export default function ListingPage() {
   const [qErr, setQErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const quoteReqRef = useRef(0);
+  const [quoteDates, setQuoteDates] = useState<{ checkIn: string; checkOut: string } | null>(null);
 
   useEffect(() => {
     if (!l) return;
     setQErr(null);
-    api.quote(l.id, checkIn, checkOut).then(setQ).catch((e: Error) => { setQ(null); setQErr(e.message); });
+    setQ(null);
+    setQuoteDates(null);
+    const reqId = ++quoteReqRef.current;
+    api.quote(l.id, checkIn, checkOut).then((quote) => {
+      if (reqId === quoteReqRef.current) {
+        setQ(quote);
+        setQuoteDates({ checkIn, checkOut });
+      }
+    }).catch((e: Error) => {
+      if (reqId === quoteReqRef.current) { setQ(null); setQErr(e.message); }
+    });
   }, [l, checkIn, checkOut]);
 
   if (error) return <ErrorBox msg={error} />;
@@ -37,7 +49,14 @@ export default function ListingPage() {
       const r = await api.book({ listingId: l.id, guestId: persona.user.id, checkIn, checkOut, guests });
       nav(`/bookings/${r.id}`);
     } catch (e) {
-      setErr((e as Error).message);
+      const errMsg = (e as Error).message;
+      if (errMsg === 'Those dates are already booked') {
+        setErr('Those dates are no longer available. Please choose different dates.');
+        setQ(null);
+        setQuoteDates(null);
+      } else {
+        setErr(errMsg);
+      }
       reload();
     } finally {
       setBusy(false);
@@ -106,7 +125,7 @@ export default function ListingPage() {
 
           <div className="mt-4">
             {isGuest ? (
-              <Button block disabled={!q || !q.available || busy} onClick={book}>
+              <Button block disabled={!q || !q.available || busy || quoteDates?.checkIn !== checkIn || quoteDates?.checkOut !== checkOut} onClick={book}>
                 {busy ? 'Locking in escrow on Stellar…' : 'Book and pay into escrow'}
               </Button>
             ) : (
